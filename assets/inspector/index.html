@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Codex Limits settings</title>
+    <link rel="stylesheet" href="settings.css">
+    <script src="settings.js" defer></script>
+  </head>
+  <body>
+    <main>
+    <form id="refresh-settings" aria-labelledby="heading">
+      <h1 id="heading">Shared refresh</h1>
+      <p>These settings apply to all Session and Weekly quota buttons.</p>
+      <fieldset id="controls" disabled>
+        <legend>Automatic updates</legend>
+        <div class="toggle">
+          <input id="enabled" name="autoRefreshEnabled" type="checkbox">
+          <label for="enabled">Enable automatic refresh</label>
+        </div>
+        <div class="field">
+          <label for="interval">Refresh interval (seconds)</label>
+          <p id="interval-help">15–86,400 seconds. For example: 60 = 1 minute, 120 = 2 minutes.</p>
+          <input id="interval" name="refreshIntervalSeconds" type="number" min="15" max="86400" step="1" value="60" required aria-describedby="interval-help" aria-invalid="false">
+        </div>
+        <button type="submit">Save for all buttons</button>
+      </fieldset>
+      <p id="status" role="status">Connecting to OpenDeck…</p>
+      <h2>Quota status</h2>
+      <p id="refresh-state">Waiting for quota status…</p>
+      <p id="refresh-error" role="status"></p>
+      <p>Last updated: <time id="last-success">Never</time> <span id="reading-age"></span></p>
+      <p id="next-refresh">Next automatic refresh: waiting for status.</p>
+      <p class="hint">When enabled, both quotas refresh immediately, then at your interval while a quota button is visible. Pressing either key always refreshes both. Disable automatic refresh for manual updates only.</p>
+      <noscript>JavaScript is required to save settings in OpenDeck.</noscript>
+    </form>
+    </main>
+  </body>
+</html>

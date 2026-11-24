@@ -1,0 +1,31 @@
+{
+  "Name": "Codex Limits",
+  "Description": "Codex subscription quota headroom. Press either key to refresh both windows.",
+  "Author": "spurlos",
+  "Version": "0.1.0",
+  "Icon": "icons/plugin",
+  "Category": "Codex Limits",
+  "PropertyInspectorPath": "inspector/index.html",
+  "CodePathLin": "bin/opendeck-codex-limits",
+  "OS": [{ "Platform": "linux" }],
+  "Actions": [
+    {
+      "Name": "Session Quota",
+      "UUID": "com.spurlos.codexlimits.session",
+      "Tooltip": "Session quota remaining. Press to refresh both quota windows.",
+      "Icon": "icons/session",
+      "Controllers": ["Keypad"],
+      "SupportedInMultiActions": false,
+      "States": [{ "Image": "icons/session", "ShowTitle": false }]
+    },
+    {
+      "Name": "Weekly Quota",
+      "UUID": "com.spurlos.codexlimits.weekly",
+      "Tooltip": "Weekly quota remaining. Press to refresh both quota windows.",
+      "Icon": "icons/weekly",
+      "Controllers": ["Keypad"],
+      "SupportedInMultiActions": false,
+      "States": [{ "Image": "icons/weekly", "ShowTitle": false }]
+    }
+  ]
+}

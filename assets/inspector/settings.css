@@ -1,0 +1,18 @@
+:root { color-scheme: dark light; font: 1rem/1.5 system-ui, sans-serif; }
+body { margin: 0; padding: 1rem; }
+h1 { font-size: 1.2rem; margin-block: 0 0.5rem; }
+p { margin-block: 0.5rem 1rem; }
+fieldset { border: 1px solid #858585; border-radius: 0.4rem; padding: 0.75rem; min-inline-size: 0; }
+legend { padding-inline: 0.3rem; }
+.toggle { display: flex; align-items: center; gap: 0.6rem; min-block-size: 3rem; }
+.toggle label { padding-block: 0.75rem; cursor: pointer; }
+input[type="checkbox"] { inline-size: 1.25rem; block-size: 1.25rem; flex-shrink: 0; accent-color: #008065; }
+.field { margin-block: 0.75rem 1rem; }
+.field label { display: block; font-weight: 600; }
+#interval-help, .hint { font-size: 0.875rem; }
+input[type="number"], button { box-sizing: border-box; font: inherit; font-size: max(1rem, 1em); min-block-size: 3rem; border: 1px solid #858585; border-radius: 0.3rem; padding: 0.6rem; }
+input[type="number"] { inline-size: 100%; }
+button { inline-size: 100%; cursor: pointer; }
+:focus-visible { outline: 3px solid #38bca0; outline-offset: 3px; }
+input:user-invalid { border-color: #e84b4b; }
+#status { min-block-size: 1.5em; }

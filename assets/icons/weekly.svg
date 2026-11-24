@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="14" fill="#101820"/>
+  <rect x="35" y="27" width="74" height="65" rx="8" fill="none" stroke="#67e8c0" stroke-width="6"/>
+  <path d="M35 46h74M54 19v18m36-18v18" fill="none" stroke="#eef6fa" stroke-width="5"/>
+  <text x="72" y="79" text-anchor="middle" font-family="sans-serif" font-size="26" fill="#eef6fa">7</text>
+  <text x="72" y="119" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#eef6fa">Weekly</text>
+</svg>
