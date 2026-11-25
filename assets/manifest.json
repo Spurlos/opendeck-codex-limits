@@ -2,7 +2,6 @@
   "Name": "Codex Limits",
   "Description": "Codex subscription quota headroom. Press either key to refresh both windows.",
   "Author": "spurlos",
-  "Version": "0.1.0",
   "Icon": "icons/plugin",
   "Category": "Codex Limits",
   "PropertyInspectorPath": "inspector/index.html",

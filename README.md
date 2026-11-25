@@ -13,8 +13,9 @@ The SDK handles registration, WebSocket messages and action lifecycle events.
 
 ## Build and install
 
-Requirements: Linux, Rustup (the toolchain file selects Rust 1.89), a native
-OpenDeck installation, and an authenticated `codex` executable on OpenDeck's PATH.
+Requirements: Linux, Rustup (the toolchain file selects Rust 1.89), `jq` for
+packaging, a native OpenDeck installation, and an authenticated `codex`
+executable on OpenDeck's PATH.
 Inherited `CODEX_HOME` is respected. No separate credentials are stored.
 
 ```sh
@@ -27,6 +28,14 @@ Copy `dist/io.github.spurlos.codexlimits.sdPlugin` into the `plugins` folder ins
 OpenDeck's config directory (use **Open config directory** in OpenDeck settings).
 Restart OpenDeck and add **Session Quota** and **Weekly Quota** to keys. The package
 contains a binary for the machine it was built on; rebuild on other architectures.
+
+## Release version
+
+Set the version in `Cargo.toml`, let Cargo update `Cargo.lock`, and commit
+both files. The packaging script adds that version to the bundled manifest
+using `assets/manifest.json` as its template. Run `bash scripts/tag-release.sh`
+to create a local annotated tag for the committed Cargo version, such as
+`v0.1.0`.
 
 ## Shared refresh settings
 

@@ -5,10 +5,12 @@ if [[ $(uname -s) != Linux ]]; then
   echo "This package currently supports Linux only." >&2
   exit 1
 fi
+version=$(bash scripts/release-version.sh)
+manifest=$(jq -e --arg version "$version" '.Version = $version' assets/manifest.json)
 cargo build --release --locked
 plugin_dir="dist/io.github.spurlos.codexlimits.sdPlugin"
 mkdir -p "$plugin_dir/bin" "$plugin_dir/icons" "$plugin_dir/inspector"
-cp -f assets/manifest.json "$plugin_dir/manifest.json"
+printf '%s\n' "$manifest" > "$plugin_dir/manifest.json"
 cp -f LICENSE THIRD_PARTY_NOTICES.txt "$plugin_dir/"
 cp -f assets/icons/*.svg "$plugin_dir/icons/"
 cp -f assets/inspector/* "$plugin_dir/inspector/"
