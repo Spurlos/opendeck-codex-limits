@@ -39,11 +39,11 @@ async fn check_shared_probe(startup: bool) {
             serde_json::from_str(ws.next().await.unwrap().unwrap().to_text().unwrap()).unwrap();
         assert_eq!(
             registration,
-            json!({"event":"registerPlugin","uuid":"com.spurlos.codexlimits"})
+            json!({"event":"registerPlugin","uuid":"io.github.spurlos.codexlimits"})
         );
         assert_eq!(
             next_event(&mut ws, "getGlobalSettings").await["context"],
-            "com.spurlos.codexlimits"
+            "io.github.spurlos.codexlimits"
         );
         ws.send(Message::Text(
             json!({"event":"didReceiveGlobalSettings","payload":{"settings":{}}})
@@ -238,7 +238,7 @@ async fn appear_buttons(ws: &mut Socket) -> Vec<Value> {
     for (context, action) in [("session-key", "session"), ("weekly-key", "weekly")] {
         let event = json!({
             "event": "willAppear",
-            "action": format!("com.spurlos.codexlimits.{action}"),
+            "action": format!("io.github.spurlos.codexlimits.{action}"),
             "context": context,
             "device": "test-device",
             "payload": {
@@ -442,7 +442,7 @@ fn start_plugin(dir: &Path, listener: &TcpListener, mode: &str) -> Child {
             "-port",
             &listener.local_addr().unwrap().port().to_string(),
             "-pluginUUID",
-            "com.spurlos.codexlimits",
+            "io.github.spurlos.codexlimits",
             "-registerEvent",
             "registerPlugin",
             "-info",

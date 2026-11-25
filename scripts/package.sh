@@ -6,10 +6,10 @@ if [[ $(uname -s) != Linux ]]; then
   exit 1
 fi
 cargo build --release --locked
-plugin_dir="dist/com.spurlos.codexlimits.sdPlugin"
+plugin_dir="dist/io.github.spurlos.codexlimits.sdPlugin"
 mkdir -p "$plugin_dir/bin" "$plugin_dir/icons" "$plugin_dir/inspector"
 cp -f assets/manifest.json "$plugin_dir/manifest.json"
-cp -f THIRD_PARTY_NOTICES.txt "$plugin_dir/THIRD_PARTY_NOTICES.txt"
+cp -f LICENSE THIRD_PARTY_NOTICES.txt "$plugin_dir/"
 cp -f assets/icons/*.svg "$plugin_dir/icons/"
 cp -f assets/inspector/* "$plugin_dir/inspector/"
 cp -f target/release/opendeck-codex-limits "$plugin_dir/bin/"

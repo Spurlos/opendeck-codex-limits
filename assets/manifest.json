@@ -11,7 +11,7 @@
   "Actions": [
     {
       "Name": "Session Quota",
-      "UUID": "com.spurlos.codexlimits.session",
+      "UUID": "io.github.spurlos.codexlimits.session",
       "Tooltip": "Session quota remaining. Press to refresh both quota windows.",
       "Icon": "icons/session",
       "Controllers": ["Keypad"],
@@ -20,7 +20,7 @@
     },
     {
       "Name": "Weekly Quota",
-      "UUID": "com.spurlos.codexlimits.weekly",
+      "UUID": "io.github.spurlos.codexlimits.weekly",
       "Tooltip": "Weekly quota remaining. Press to refresh both quota windows.",
       "Icon": "icons/weekly",
       "Controllers": ["Keypad"],

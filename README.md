@@ -23,7 +23,7 @@ cargo clippy --locked --all-targets -- -D warnings
 bash scripts/package.sh
 ```
 
-Copy `dist/com.spurlos.codexlimits.sdPlugin` into the `plugins` folder inside
+Copy `dist/io.github.spurlos.codexlimits.sdPlugin` into the `plugins` folder inside
 OpenDeck's config directory (use **Open config directory** in OpenDeck settings).
 Restart OpenDeck and add **Session Quota** and **Weekly Quota** to keys. The package
 contains a binary for the machine it was built on; rebuild on other architectures.
@@ -123,3 +123,8 @@ uv run --with playwright --with websockets python tests/inspector.py
 
 Physical-device validation is tracked in Beads under `ocl-z32.3`.
 Flatpak is outside the current scope.
+
+## License
+
+The plugin is licensed under the [MIT License](LICENSE). See
+[Third-Party Notices](THIRD_PARTY_NOTICES.txt) for attribution.

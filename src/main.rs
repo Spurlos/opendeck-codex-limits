@@ -18,8 +18,8 @@ use tokio::{
     time::Instant,
 };
 
-const SESSION: &str = "com.spurlos.codexlimits.session";
-const WEEKLY: &str = "com.spurlos.codexlimits.weekly";
+const SESSION: &str = "io.github.spurlos.codexlimits.session";
+const WEEKLY: &str = "io.github.spurlos.codexlimits.weekly";
 
 #[derive(Default)]
 struct Cache {
