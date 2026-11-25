@@ -165,4 +165,13 @@ Flatpak is outside the current scope.
 ## License
 
 The plugin is licensed under the [MIT License](LICENSE). See
-[Third-Party Notices](THIRD_PARTY_NOTICES.txt) for attribution.
+[Third-Party Notices](THIRD_PARTY_NOTICES.txt) and
+[Rust dependency licenses](RUST_DEPENDENCY_LICENSES.txt) for attribution.
+The bundle also includes the Rust standard library notices from the build toolchain.
+
+When the bundled dependencies change, regenerate their notices with
+`cargo-about` 0.9.3:
+
+```sh
+cargo about generate --locked --fail -o RUST_DEPENDENCY_LICENSES.txt about.hbs
+```

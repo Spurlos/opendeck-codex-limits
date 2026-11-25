@@ -1,3 +1,8 @@
+Rust components
+See RUST_DEPENDENCY_LICENSES.txt for the Cargo dependency licenses.
+The plugin bundle also includes RUST_STANDARD_LIBRARY_LICENSES.html from the
+Rust toolchain used for the build.
+
 Codex logo vector
 Source: https://raw.githubusercontent.com/lobehub/lobe-icons/master/packages/static-svg/icons/codex.svg
 Adapted from LobeHub Icons: color, opacity and size changed for key backgrounds.

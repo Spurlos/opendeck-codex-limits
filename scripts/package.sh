@@ -23,7 +23,9 @@ fi
 plugin_dir="$output_dir/$bundle"
 mkdir -p "$plugin_dir/bin" "$plugin_dir/icons" "$plugin_dir/inspector"
 printf '%s\n' "$manifest" > "$plugin_dir/manifest.json"
-cp -f LICENSE THIRD_PARTY_NOTICES.txt "$plugin_dir/"
+cp -f LICENSE THIRD_PARTY_NOTICES.txt RUST_DEPENDENCY_LICENSES.txt "$plugin_dir/"
+cp -f "$(rustc --print sysroot)/share/doc/rust/COPYRIGHT-library.html" \
+  "$plugin_dir/RUST_STANDARD_LIBRARY_LICENSES.html"
 cp -f assets/icons/*.svg "$plugin_dir/icons/"
 cp -f assets/inspector/* "$plugin_dir/inspector/"
 cp -f "${CARGO_TARGET_DIR:-target}/release/opendeck-codex-limits" "$plugin_dir/bin/"
