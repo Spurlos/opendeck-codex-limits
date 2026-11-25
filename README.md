@@ -29,13 +29,27 @@ OpenDeck's config directory (use **Open config directory** in OpenDeck settings)
 Restart OpenDeck and add **Session Quota** and **Weekly Quota** to keys. The package
 contains a binary for the machine it was built on; rebuild on other architectures.
 
-## Release version
+## Prepare a GitHub release
 
 Set the version in `Cargo.toml`, let Cargo update `Cargo.lock`, and commit
-both files. The packaging script adds that version to the bundled manifest
-using `assets/manifest.json` as its template. Run `bash scripts/tag-release.sh`
-to create a local annotated tag for the committed Cargo version, such as
-`v0.1.0`.
+both files. The packaging script generates the bundled manifest from that
+version and the template in `assets/manifest.json`.
+
+With the release commit on GitHub and `origin` pointing to the plugin repository,
+run:
+
+```sh
+bash scripts/tag-release.sh --push
+```
+
+This creates and pushes the annotated version tag, such as `v0.1.0`.
+[GitHub Actions](.github/workflows/release.yml) runs the checks, builds a Linux
+x86-64 ZIP on Debian 12 (glibc 2.36), and attaches it to a draft GitHub Release.
+Install the ZIP through OpenDeck to smoke-test it, then publish the draft.
+
+Run `bash scripts/tag-release.sh` to create a tag locally. To build a ZIP
+locally, install `zip` and `unzip` and run `bash scripts/package.sh --zip`.
+The local ZIP uses your machine's architecture and build environment.
 
 ## Shared refresh settings
 

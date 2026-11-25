@@ -1,0 +1,75 @@
+name: Prepare release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency: release-${{ github.ref }}
+
+jobs:
+  release:
+    if: github.event.deleted == false
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check tag against Cargo version
+        run: |
+          version=$(bash scripts/release-version.sh)
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ || "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "Expected a stable Cargo version and matching tag. Got $version and $GITHUB_REF_NAME." >&2
+            exit 1
+          fi
+
+      - name: Run checks
+        run: |
+          cargo fmt --all --check
+          cargo test --locked -- --test-threads=1
+          cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Build and verify ZIP
+        id: package
+        run: |
+          mkdir -p dist
+          asset=$(docker run --rm \
+            --env CARGO_TARGET_DIR=/tmp/cargo-target \
+            --volume "$PWD:/workspace" \
+            --workdir /workspace \
+            rust:1.89.0-bookworm bash -ec '
+              apt-get update >&2
+              apt-get install -y --no-install-recommends jq zip unzip >&2
+              bash scripts/package.sh --zip
+            ')
+          test -f "$asset"
+          printf 'asset=%s\n' "$asset" >> "$GITHUB_OUTPUT"
+
+      - name: Attach ZIP to draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET: ${{ steps.package.outputs.asset }}
+        run: |
+          if release=$(gh release view "$GITHUB_REF_NAME" --json isDraft,assets 2>/dev/null); then
+            if ! jq -e '.isDraft' <<< "$release" > /dev/null; then
+              echo "The release for $GITHUB_REF_NAME is already published." >&2
+              exit 1
+            fi
+            state=$(jq -r --arg name "${ASSET##*/}" '.assets[] | select(.name == $name) | .state' <<< "$release")
+            case "$state" in
+              uploaded) echo "The draft already has the release ZIP." ;;
+              "") gh release upload "$GITHUB_REF_NAME" "$ASSET" ;;
+              starter) gh release upload "$GITHUB_REF_NAME" "$ASSET" --clobber ;;
+              *) echo "Unexpected state for the draft release ZIP: $state" >&2; exit 1 ;;
+            esac
+          else
+            gh release create "$GITHUB_REF_NAME" "$ASSET" --verify-tag --generate-notes --draft
+          fi
