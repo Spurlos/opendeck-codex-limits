@@ -28,21 +28,28 @@ OpenDeck's config directory (use **Open config directory** in OpenDeck settings)
 Restart OpenDeck and add **Session Quota** and **Weekly Quota** to keys. The package
 contains a binary for the machine it was built on; rebuild on other architectures.
 
-## Automatic refresh
+## Shared refresh settings
 
-Select either quota button in OpenDeck. In its settings inspector, check
-**Enable automatic refresh**, enter a **Refresh interval (seconds)**, and click
-**Save for all buttons**. The interval accepts whole seconds from 15 to 86,400;
-60 is one minute and 120 is two minutes. It defaults to 60 seconds, with automatic
-refresh disabled until you enable it. These are plugin-wide settings: changing
-them from either button updates every quota button and persists across restarts.
+Select either quota button in OpenDeck and click **Save for all buttons** after
+editing its refresh options. Both options are off by default and persist across
+restarts.
+
+- **Refresh once on startup** reads both quota windows when the first quota
+  button appears after OpenDeck starts. Every quota button shares the result,
+  including when you switch profiles. This works with periodic refresh off.
+- **Enable automatic refresh** reads both quotas immediately, then uses the
+  **Refresh interval (seconds)**. The default is 60 seconds, and the interval
+  accepts whole seconds from 15 to 86,400.
+
+If you previously enabled the startup checkbox on an individual button, enable
+it once in the shared settings.
 
 On upgrading from the initial version, remove and re-add one quota action to
 expose the new inspector: OpenDeck stores the old inspector path in existing
 action instances. The shared settings still apply to your other existing keys.
 
-Enabling refresh updates both quotas immediately, then waits the configured
-interval after each completed probe. A manual press also restarts that interval.
+Periodic refresh waits the configured interval after each completed probe.
+A manual press also restarts that interval.
 Polling pauses when no quota buttons are visible and resumes when one returns.
 While automatic refresh is enabled, the next reported session or weekly reset
 also triggers a shared refresh, even if it occurs before the configured interval.
@@ -66,8 +73,18 @@ Error messages are fixed, sanitized descriptions for missing executable, login,
 unsupported account, timeout, malformed response and other failures. Raw account
 errors are not forwarded to the inspector.
 
-Both keys initially say **Press key**. After refresh they show percentage
-remaining, a depleting circle, the actual reported window duration, time until
+The plugin loads the last successful reading on startup and shares it across
+all quota keys. While the next refresh runs, keys keep showing their last
+known values with an **Updating** label. Without a reading, a key shows
+**Press key** while idle and **Reading…** during a refresh.
+
+Each successful refresh atomically replaces one shared JSON file at
+`$XDG_CACHE_HOME/opendeck-codex-limits/quota.json` (by default
+`~/.cache/opendeck-codex-limits/quota.json`). The file holds both quota windows,
+the banked reset count, and the last successful read time. Failed reads and
+countdown updates leave the file alone.
+
+Quota keys show percentage remaining, a depleting circle, the reported window duration, time until
 reset, and a `↻` banked-reset count (`?` means unavailable). Assets use a 144 × 144
 canvas for 72 × 72 physical keys, with a 36–40px central number, 24px countdown,
 and 23px reset badge. The top-left duration (for example `5h` or `7d`) identifies
@@ -95,8 +112,8 @@ log; app-server stderr is discarded to avoid logging sensitive diagnostics.
 
 The scheduler has virtual-time tests for intervals, disable/enable, visibility,
 backoff, reset deadlines and probe lifecycle. Protocol integration tests exercise
-real reset-time polling, status delivery, stale timestamp retention and manual
-refresh during backoff.
+real reset-time polling, status delivery, quota restoration across plugin
+restarts, and manual refresh during backoff.
 To exercise two settings inspectors in headless Google Chrome (installed at
 `/usr/bin/google-chrome`):
 

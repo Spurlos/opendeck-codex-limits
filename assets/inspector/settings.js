@@ -5,6 +5,7 @@ const controls = document.getElementById("controls");
 const enabled = document.getElementById("enabled");
 const interval = document.getElementById("interval");
 const status = document.getElementById("status");
+const startup = document.getElementById("startup");
 let socket;
 let context;
 let current = {};
@@ -41,7 +42,7 @@ function renderDiagnostics() {
   }
   refreshState.textContent = diagnostics.refreshing ? "Refreshing both quotas…"
     : diagnostics.errorCode ? (success ? "Showing the last successful reading." : "No quota reading available yet.")
-    : success ? "Quota reading available." : "Press a quota key or enable automatic refresh to read quota.";
+    : success ? "Quota reading available." : "Press a quota key to read quota now.";
   // Only errors use a live region. Age/countdown ticks and brief loading states
   // stay readable without repeatedly interrupting screen-reader speech.
   const error = diagnostics.errorMessage ?? "";
@@ -51,7 +52,7 @@ function renderDiagnostics() {
   }
   const failures = diagnostics.consecutiveFailures ?? 0;
   const retry = failures ? ` Retry backoff after ${failures} failed ${failures === 1 ? "attempt" : "attempts"}.` : "";
-  nextRefresh.textContent = !diagnostics.autoRefreshEnabled ? "Automatic refresh is off. Press either key to refresh."
+  nextRefresh.textContent = !diagnostics.autoRefreshEnabled ? "Periodic refresh is off."
     : !diagnostics.hasVisibleButtons ? "Automatic refresh is paused while no quota buttons are visible."
     : diagnostics.refreshing ? "The next automatic refresh is scheduled after this attempt finishes."
     : Number.isFinite(diagnostics.nextRefreshAt) ? `Next automatic refresh in ${age(Math.max(0, diagnostics.nextRefreshAt - now))}.${retry}`
@@ -86,6 +87,7 @@ window.connectElgatoStreamDeckSocket = (port, uuid, registerEvent) => {
     }
     if (event.event !== "didReceiveGlobalSettings") return;
     current = event.payload?.settings ?? {};
+    startup.checked = current.refreshOnStartup === true;
     enabled.checked = current.autoRefreshEnabled === true;
     interval.value = String(current.refreshIntervalSeconds ?? 60);
     controls.disabled = false;
@@ -130,6 +132,7 @@ form.addEventListener("submit", (event) => {
   status.textContent = "Saving…";
   send("setGlobalSettings", {
     ...current,
+    refreshOnStartup: startup.checked,
     autoRefreshEnabled: enabled.checked,
     refreshIntervalSeconds: seconds,
   });

@@ -73,6 +73,10 @@ async def main():
                 await connect(page, context)
                 pages.append(page)
             first, second = pages
+            startup_label = "Refresh once on startup"
+            assert not await first.get_by_label(startup_label).is_checked()
+            await first.get_by_label(startup_label).check()
+            assert not await second.get_by_label(startup_label).is_checked()
             await first.locator("#last-success").filter(has_text="Never").wait_for()
             assert not await first.get_by_label("Enable automatic refresh").is_checked()
             assert await first.get_by_label("Refresh interval (seconds)").is_disabled()
@@ -81,8 +85,8 @@ async def main():
             assert saves == [], "editing must not save before explicit submission"
             await first.get_by_role("button", name="Save for all buttons").click()
             await first.get_by_role("status").filter(has_text="Saved for all quota buttons.").wait_for()
-            await second.wait_for_function("document.getElementById('enabled').checked && document.getElementById('interval').value === '75'")
-            assert saves == [{"autoRefreshEnabled": True, "refreshIntervalSeconds": 75}]
+            await second.wait_for_function("document.getElementById('startup').checked && document.getElementById('enabled').checked && document.getElementById('interval').value === '75'")
+            assert saves == [{"refreshOnStartup": True, "autoRefreshEnabled": True, "refreshIntervalSeconds": 75}]
             updated_at = int(time.time()) - 120
             diagnostics.update(lastSuccessAt=updated_at, nextRefreshAt=int(time.time()) + 60)
             await broadcast_diagnostics()
@@ -103,6 +107,7 @@ async def main():
             await broadcast_diagnostics()
             await first.wait_for_function("document.getElementById('refresh-error').textContent === ''")
             await connect(first, "session-key")  # Reopening restores the shared setting.
+            assert await first.get_by_label(startup_label).is_checked()
             assert await first.get_by_label("Enable automatic refresh").is_checked()
             assert await first.get_by_label("Refresh interval (seconds)").input_value() == "75"
             await first.get_by_label("Refresh interval (seconds)").fill("0")
@@ -112,12 +117,16 @@ async def main():
             await second.get_by_label("Enable automatic refresh").uncheck()
             await second.get_by_role("button", name="Save for all buttons").click()
             await first.wait_for_function("!document.getElementById('enabled').checked")
-            assert saves[-1] == {"autoRefreshEnabled": False, "refreshIntervalSeconds": 75}
+            assert saves[-1] == {"refreshOnStartup": True, "autoRefreshEnabled": False, "refreshIntervalSeconds": 75}
             assert await first.get_by_label("Refresh interval (seconds)").is_disabled()
-            await first.locator("#next-refresh").filter(has_text="Automatic refresh is off").wait_for()
+            await first.locator("#next-refresh").filter(has_text="Periodic refresh is off").wait_for()
+            await second.get_by_label(startup_label).uncheck()
+            await second.get_by_role("button", name="Save for all buttons").click()
+            await first.wait_for_function("!document.getElementById('startup').checked")
+            assert saves[-1] == {"refreshOnStartup": False, "autoRefreshEnabled": False, "refreshIntervalSeconds": 75}
             assert errors == [], errors
             assert all(m["context"] in ["session-key", "weekly-key"] for m in messages if "context" in m)
-            print("Inspector checks passed: settings save/restore, validation, freshness, errors, backoff and recovery.")
+            print("Inspector checks passed: shared startup and periodic settings, validation, freshness, errors, backoff and recovery.")
         finally:
             await browser.close()
 

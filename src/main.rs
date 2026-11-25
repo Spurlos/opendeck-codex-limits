@@ -1,3 +1,4 @@
+mod cache;
 mod diagnostics;
 mod probe;
 mod quota;
@@ -5,8 +6,10 @@ mod render;
 mod settings;
 
 use openaction::*;
+use render::KeyState;
 use settings::{Polling, RefreshSettings};
 use std::{
+    path::PathBuf,
     sync::{Arc, LazyLock},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -20,25 +23,35 @@ const WEEKLY: &str = "com.spurlos.codexlimits.weekly";
 
 #[derive(Default)]
 struct Cache {
-    quota: Option<quota::Quota>,
-    failed: bool,
+    snapshot: Option<cache::Snapshot>,
     refreshing: bool,
-    last_success_at: Option<i64>,
     error: Option<diagnostics::Failure>,
 }
 
 struct Shared {
     cache: Mutex<Cache>,
-    // Held across the entire probe, including cleanup. try_lock coalesces presses.
+    cache_path: Option<PathBuf>,
+    // Held through probe cleanup to coalesce overlapping refresh requests.
     probe: Arc<Mutex<()>>,
     rendering: Mutex<()>,
     polling: watch::Sender<Polling>,
 }
 
-impl Default for Shared {
-    fn default() -> Self {
+impl Shared {
+    fn new() -> Self {
+        let cache_path = cache::path();
+        let snapshot = cache_path.as_deref().and_then(|path| {
+            cache::Snapshot::load(path).unwrap_or_else(|_| {
+                eprintln!("Cannot load the saved Codex quota cache");
+                None
+            })
+        });
         Self {
-            cache: Mutex::default(),
+            cache: Mutex::new(Cache {
+                snapshot,
+                ..Default::default()
+            }),
+            cache_path,
             probe: Arc::default(),
             rendering: Mutex::default(),
             polling: watch::channel(Polling::default()).0,
@@ -46,7 +59,13 @@ impl Default for Shared {
     }
 }
 
-static SHARED: LazyLock<Arc<Shared>> = LazyLock::new(|| Arc::new(Shared::default()));
+static SHARED: LazyLock<Arc<Shared>> = LazyLock::new(|| Arc::new(Shared::new()));
+
+#[derive(PartialEq, Eq)]
+enum RefreshTrigger {
+    Manual,
+    Scheduled,
+}
 
 fn now() -> i64 {
     SystemTime::now()
@@ -61,7 +80,10 @@ impl Shared {
         let schedule = self.polling.borrow();
         diagnostics::Status {
             r#type: "quotaStatus",
-            last_success_at: cache.last_success_at,
+            last_success_at: cache
+                .snapshot
+                .as_ref()
+                .map(|snapshot| snapshot.last_success_at),
             refreshing: cache.refreshing,
             error_code: cache.error,
             error_message: cache.error.map(|error| error.message()),
@@ -91,28 +113,27 @@ impl Shared {
     async fn paint(&self, instance: &Instance) -> OpenActionResult<()> {
         let cache = self.cache.lock().await;
         let weekly = instance.action_uuid == WEEKLY;
-        let window = cache.quota.as_ref().and_then(|q| {
+        let quota = cache.snapshot.as_ref().map(|snapshot| &snapshot.quota);
+        let window = quota.and_then(|q| {
             if weekly {
                 q.secondary.as_ref()
             } else {
                 q.primary.as_ref()
             }
         });
-        let state = if cache.refreshing {
-            "Reading"
-        } else if cache.failed && cache.quota.is_some() {
-            "Stale"
-        } else if cache.failed || (cache.quota.is_some() && window.is_none()) {
-            "Unavailable"
-        } else if cache.quota.is_some() {
-            ""
-        } else {
-            "Manual"
+        let state = match (window.is_some(), cache.refreshing, cache.error.is_some()) {
+            (true, true, _) => KeyState::Updating,
+            (true, false, true) => KeyState::Stale,
+            (true, false, false) => KeyState::Ready,
+            (false, true, _) => KeyState::Reading,
+            (false, false, true) => KeyState::Unavailable,
+            (false, false, false) if quota.is_some() => KeyState::Unavailable,
+            (false, false, false) => KeyState::Manual,
         };
         let image = render::image(
             if weekly { "Weekly" } else { "Session" },
             window,
-            cache.quota.as_ref().and_then(|q| q.banked_resets),
+            quota.and_then(|q| q.banked_resets),
             state,
             now(),
         );
@@ -131,38 +152,59 @@ impl Shared {
         }
     }
 
-    fn refresh(self: &Arc<Self>) {
+    fn refresh(self: &Arc<Self>, trigger: RefreshTrigger) {
         let Ok(guard) = self.probe.clone().try_lock_owned() else {
             return;
         };
-        self.polling.send_modify(|s| s.refreshing = true);
+        if trigger == RefreshTrigger::Scheduled
+            && self
+                .polling
+                .borrow()
+                .deadline()
+                .is_none_or(|deadline| deadline > Instant::now())
+        {
+            return;
+        }
+        self.polling.send_modify(|s| {
+            s.has_attempted = true;
+            s.refreshing = true;
+        });
         let shared = self.clone();
         tokio::spawn(async move {
             shared.cache.lock().await.refreshing = true;
             shared.paint_all().await;
             shared.publish_status().await;
-            let result = probe::read().await;
-            let fresh = result.as_ref().ok().cloned();
+            let result = probe::read().await.map(|quota| cache::Snapshot {
+                quota,
+                last_success_at: now(),
+            });
+            if let (Ok(snapshot), Some(path)) = (&result, shared.cache_path.clone()) {
+                let snapshot = snapshot.clone();
+                if !matches!(
+                    tokio::task::spawn_blocking(move || snapshot.save(&path)).await,
+                    Ok(Ok(()))
+                ) {
+                    eprintln!("Cannot save the Codex quota cache");
+                }
+            }
+            let fresh = result.as_ref().ok().map(|snapshot| snapshot.quota.clone());
             let mut cache = shared.cache.lock().await;
             cache.refreshing = false;
             match result {
-                Ok(quota) => {
-                    cache.quota = Some(quota);
-                    cache.failed = false;
-                    cache.last_success_at = Some(now());
+                Ok(snapshot) => {
+                    cache.snapshot = Some(snapshot);
                     cache.error = None;
                 }
                 Err(error) => {
-                    cache.failed = true;
                     cache.error = Some(diagnostics::Failure::from_error(&error));
                     eprintln!("Quota refresh failed: {}", cache.error.unwrap());
                 }
             }
             drop(cache);
             shared.paint_all().await;
-            drop(guard);
             shared.polling.send_modify(|s| {
                 s.completed(fresh.as_ref(), now());
+                drop(guard);
             });
             shared.publish_status().await;
         });
@@ -182,7 +224,10 @@ macro_rules! quota_action {
                 instance: &Instance,
                 _: &Self::Settings,
             ) -> OpenActionResult<()> {
-                SHARED.paint(instance).await?;
+                {
+                    let _guard = SHARED.rendering.lock().await;
+                    SHARED.paint(instance).await?;
+                }
                 SHARED.polling.send_modify(|s| {
                     s.visible.insert(instance.instance_id.clone());
                 });
@@ -201,7 +246,7 @@ macro_rules! quota_action {
                 Ok(())
             }
             async fn key_up(&self, _: &Instance, _: &Self::Settings) -> OpenActionResult<()> {
-                SHARED.refresh();
+                SHARED.refresh(RefreshTrigger::Manual);
                 Ok(())
             }
             async fn property_inspector_did_appear(
@@ -271,13 +316,14 @@ async fn main() -> anyhow::Result<()> {
         println!("{}", serde_json::to_string_pretty(&probe::read().await?)?);
         return Ok(());
     }
+    LazyLock::force(&SHARED);
     register_action(SessionAction).await;
     register_action(WeeklyAction).await;
     global_events::set_global_event_handler(&GlobalHandler);
     let polling = tokio::spawn(async {
         let mut receiver = SHARED.polling.subscribe();
         while settings::wait_for_refresh(&mut receiver).await {
-            SHARED.refresh();
+            SHARED.refresh(RefreshTrigger::Scheduled);
         }
     });
     let ticker = tokio::spawn(async {

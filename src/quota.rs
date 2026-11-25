@@ -24,36 +24,45 @@ pub struct Quota {
     pub banked_resets: Option<u64>,
 }
 
+impl Quota {
+    pub fn validate(&self) -> Result<()> {
+        if self.primary.is_none() && self.secondary.is_none() {
+            bail!(crate::diagnostics::Failure::UnsupportedAccount);
+        }
+        for window in [&self.primary, &self.secondary].into_iter().flatten() {
+            if !window.used_percent.is_finite()
+                || window.window_duration_mins == 0
+                || window.resets_at < 0
+            {
+                bail!("Invalid quota window");
+            }
+        }
+        Ok(())
+    }
+}
+
 pub fn parse(result: Value) -> Result<Quota> {
     let snapshot = result
         .pointer("/rateLimitsByLimitId/codex")
         .filter(|v| !v.is_null())
         .or_else(|| result.get("rateLimits"))
         .ok_or_else(|| anyhow::anyhow!("Codex quota unavailable"))?;
-    let window = |name: &str| -> Result<Option<Window>> {
-        match snapshot.get(name).filter(|v| !v.is_null()) {
-            Some(v) => {
-                let w: Window = serde_json::from_value(v.clone())?;
-                if !w.used_percent.is_finite() || w.window_duration_mins == 0 || w.resets_at < 0 {
-                    bail!("Invalid quota window");
-                }
-                Ok(Some(w))
-            }
-            None => Ok(None),
-        }
+    let window = |name: &str| {
+        snapshot
+            .get(name)
+            .filter(|v| !v.is_null())
+            .map(Window::deserialize)
+            .transpose()
     };
-    let primary = window("primary")?;
-    let secondary = window("secondary")?;
-    if primary.is_none() && secondary.is_none() {
-        bail!(crate::diagnostics::Failure::UnsupportedAccount);
-    }
-    Ok(Quota {
-        primary,
-        secondary,
+    let quota = Quota {
+        primary: window("primary")?,
+        secondary: window("secondary")?,
         banked_resets: result
             .pointer("/rateLimitResetCredits/availableCount")
             .and_then(Value::as_u64),
-    })
+    };
+    quota.validate()?;
+    Ok(quota)
 }
 
 #[cfg(test)]

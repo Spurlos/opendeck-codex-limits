@@ -15,6 +15,11 @@
       <fieldset id="controls" disabled>
         <legend>Automatic updates</legend>
         <div class="toggle">
+          <input id="startup" name="refreshOnStartup" type="checkbox" aria-describedby="startup-help">
+          <label for="startup">Refresh once on startup</label>
+        </div>
+        <p id="startup-help" class="hint">Read both quotas once when a quota button first appears after OpenDeck starts.</p>
+        <div class="toggle">
           <input id="enabled" name="autoRefreshEnabled" type="checkbox">
           <label for="enabled">Enable automatic refresh</label>
         </div>
@@ -26,14 +31,14 @@
         <button type="submit">Save for all buttons</button>
       </fieldset>
       <p id="status" role="status">Connecting to OpenDeck…</p>
+    </form>
       <h2>Quota status</h2>
       <p id="refresh-state">Waiting for quota status…</p>
       <p id="refresh-error" role="status"></p>
       <p>Last updated: <time id="last-success">Never</time> <span id="reading-age"></span></p>
       <p id="next-refresh">Next automatic refresh: waiting for status.</p>
-      <p class="hint">When enabled, both quotas refresh immediately, then at your interval while a quota button is visible. Pressing either key always refreshes both. Disable automatic refresh for manual updates only.</p>
+      <p class="hint">When automatic refresh is enabled, both quotas refresh immediately, then at your interval while a quota button is visible. Pressing either key always refreshes both.</p>
       <noscript>JavaScript is required to save settings in OpenDeck.</noscript>
-    </form>
     </main>
   </body>
 </html>

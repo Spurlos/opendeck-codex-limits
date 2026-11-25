@@ -11,6 +11,7 @@ pub const MAX_INTERVAL: u64 = 86_400;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct RefreshSettings {
+    pub refresh_on_startup: bool,
     pub auto_refresh_enabled: bool,
     pub refresh_interval_seconds: u64,
 }
@@ -18,6 +19,7 @@ pub struct RefreshSettings {
 impl Default for RefreshSettings {
     fn default() -> Self {
         Self {
+            refresh_on_startup: false,
             auto_refresh_enabled: false,
             refresh_interval_seconds: 60,
         }
@@ -35,6 +37,7 @@ pub struct Polling {
     pub settings: Option<RefreshSettings>,
     pub visible: HashSet<String>,
     pub refreshing: bool,
+    pub has_attempted: bool,
     pub finished_at: Option<Instant>,
     pub failures: u32,
     pub reset_at: Option<Instant>,
@@ -55,7 +58,13 @@ impl Polling {
 
     pub fn deadline(&self) -> Option<Instant> {
         let settings = self.settings.as_ref()?;
-        if !settings.auto_refresh_enabled || self.visible.is_empty() || self.refreshing {
+        if self.visible.is_empty() || self.refreshing {
+            return None;
+        }
+        if settings.refresh_on_startup && !self.has_attempted {
+            return Some(Instant::now());
+        }
+        if !settings.auto_refresh_enabled {
             return None;
         }
         let base = settings.refresh_interval_seconds;
@@ -125,6 +134,7 @@ mod tests {
             settings: Some(RefreshSettings {
                 auto_refresh_enabled: true,
                 refresh_interval_seconds: 60,
+                ..Default::default()
             }),
             visible: HashSet::from(["session".into(), "weekly".into()]),
             ..Default::default()

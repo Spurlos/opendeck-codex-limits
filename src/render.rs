@@ -1,12 +1,22 @@
 use crate::quota::Window;
 use base64::{Engine, engine::general_purpose::STANDARD};
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum KeyState {
+    Manual,
+    Reading,
+    Ready,
+    Updating,
+    Stale,
+    Unavailable,
+}
+
 pub fn countdown(window: &Window, now: i64) -> String {
     let seconds = window.resets_at.saturating_sub(now).max(0);
     if seconds == 0 {
         return "Reset due".into();
     }
-    let minutes = (seconds + 59) / 60;
+    let minutes = (seconds as u64).div_ceil(60);
     if minutes >= 1440 {
         format!("{}d {}h", minutes / 1440, minutes % 1440 / 60)
     } else if minutes >= 60 {
@@ -20,17 +30,22 @@ pub fn image(
     label: &str,
     window: Option<&Window>,
     banked: Option<u64>,
-    state: &str,
+    state: KeyState,
     now: i64,
 ) -> String {
-    let color = if state == "Stale" {
+    let color = if state == KeyState::Stale {
         "#f6b44a"
     } else {
         "#67e8c0"
     };
-    let percent = window
-        .map(|w| format!("{:.0}", w.remaining()))
-        .unwrap_or_else(|| "—".into());
+    let center = match window {
+        Some(window) => format!("{:.0}", window.remaining()),
+        None => match state {
+            KeyState::Reading => "…".into(),
+            KeyState::Unavailable => "N/A".into(),
+            _ => "—".into(),
+        },
+    };
     let circumference = 2.0 * std::f64::consts::PI * 41.0;
     let ring = circumference * window.map(|w| w.remaining()).unwrap_or(0.0) / 100.0;
     let duration = window
@@ -45,29 +60,25 @@ pub fn image(
             }
         })
         .unwrap_or_default();
-    let countdown = window
-        .map(|w| countdown(w, now))
-        .unwrap_or_else(|| "Press key".into());
+    let countdown = window.map(|w| countdown(w, now)).unwrap_or_else(|| {
+        if state == KeyState::Reading {
+            String::new()
+        } else {
+            "Press key".into()
+        }
+    });
     let heading = if duration.is_empty() {
         label
     } else {
         &duration
     };
-    let center = if window.is_some() {
-        percent.as_str()
-    } else if state == "Reading" {
-        "…"
-    } else if state == "Unavailable" {
-        "N/A"
-    } else {
-        "—"
-    };
-    let detail = if state == "Stale" || state == "Reading" {
-        state
-    } else if window.is_some() {
-        "% left"
-    } else {
-        "Refresh"
+    let detail = match state {
+        KeyState::Manual => "Refresh",
+        KeyState::Reading => "Reading…",
+        KeyState::Ready => "% left",
+        KeyState::Updating => "Updating",
+        KeyState::Stale => "Stale",
+        KeyState::Unavailable => "Unavailable",
     };
     let center_font = if center.chars().count() >= 3 { 36 } else { 40 };
     let banked = banked.map(|n| n.to_string()).unwrap_or_else(|| "?".into());
