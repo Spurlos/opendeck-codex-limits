@@ -173,5 +173,6 @@ When the bundled dependencies change, regenerate their notices with
 `cargo-about` 0.9.3:
 
 ```sh
-cargo about generate --locked --fail -o RUST_DEPENDENCY_LICENSES.txt about.hbs
+cargo about generate --locked --fail -o RUST_DEPENDENCY_LICENSES.txt about.hbs &&
+  sed -i 's/\r$//' RUST_DEPENDENCY_LICENSES.txt
 ```
