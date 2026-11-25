@@ -6,13 +6,19 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency: release-${{ github.ref }}
 
 jobs:
-  release:
+  checks:
     if: github.event.deleted == false
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: checks
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -25,17 +31,11 @@ jobs:
 
       - name: Check tag against Cargo version
         run: |
-          version=$(bash scripts/release-version.sh)
+          version=$(./scripts/release-version.sh)
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ || "$GITHUB_REF_NAME" != "v$version" ]]; then
             echo "Expected a stable Cargo version and matching tag. Got $version and $GITHUB_REF_NAME." >&2
             exit 1
           fi
-
-      - name: Run checks
-        run: |
-          cargo fmt --all --check
-          cargo test --locked -- --test-threads=1
-          cargo clippy --locked --all-targets -- -D warnings
 
       - name: Build and verify ZIP
         id: package
@@ -48,7 +48,7 @@ jobs:
             rust:1.89.0-bookworm bash -ec '
               apt-get update >&2
               apt-get install -y --no-install-recommends jq zip unzip >&2
-              bash scripts/package.sh --zip
+              ./scripts/package.sh --zip
             ')
           test -f "$asset"
           printf 'asset=%s\n' "$asset" >> "$GITHUB_OUTPUT"

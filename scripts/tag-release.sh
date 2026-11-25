@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 if (( $# > 1 )) || [[ -n ${1:-} && $1 != --push ]]; then
-  echo "Usage: bash scripts/tag-release.sh [--push]" >&2
+  echo "Usage: ./scripts/tag-release.sh [--push]" >&2
   exit 2
 fi
 
@@ -12,7 +12,7 @@ if ! git diff --quiet HEAD -- Cargo.toml Cargo.lock; then
   exit 1
 fi
 
-version=$(bash scripts/release-version.sh)
+version=$(./scripts/release-version.sh)
 tag="v$version"
 ref="refs/tags/$tag"
 

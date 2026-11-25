@@ -2,14 +2,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if (( $# > 1 )) || [[ -n ${1:-} && $1 != --zip ]]; then
-  echo "Usage: bash scripts/package.sh [--zip]" >&2
+  echo "Usage: ./scripts/package.sh [--zip]" >&2
   exit 2
 fi
 if [[ $(uname -s) != Linux ]]; then
   echo "This package currently supports Linux only." >&2
   exit 1
 fi
-version=$(bash scripts/release-version.sh)
+version=$(./scripts/release-version.sh)
 manifest=$(jq -e --arg version "$version" '.Version = $version' assets/manifest.json)
 cargo build --release --locked
 bundle_id="io.github.spurlos.codexlimits"

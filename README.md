@@ -21,7 +21,7 @@ Inherited `CODEX_HOME` is respected. No separate credentials are stored.
 ```sh
 cargo test --locked
 cargo clippy --locked --all-targets -- -D warnings
-bash scripts/package.sh
+./scripts/package.sh
 ```
 
 Copy `dist/io.github.spurlos.codexlimits.sdPlugin` into the `plugins` folder inside
@@ -39,7 +39,7 @@ With the release commit on GitHub and `origin` pointing to the plugin repository
 run:
 
 ```sh
-bash scripts/tag-release.sh --push
+./scripts/tag-release.sh --push
 ```
 
 This creates and pushes the annotated version tag, such as `v0.1.0`.
@@ -47,9 +47,24 @@ This creates and pushes the annotated version tag, such as `v0.1.0`.
 x86-64 ZIP on Debian 12 (glibc 2.36), and attaches it to a draft GitHub Release.
 Install the ZIP through OpenDeck to smoke-test it, then publish the draft.
 
-Run `bash scripts/tag-release.sh` to create a tag locally. To build a ZIP
-locally, install `zip` and `unzip` and run `bash scripts/package.sh --zip`.
+Run `./scripts/tag-release.sh` to create a tag locally. To build a ZIP
+locally, install `zip` and `unzip` and run `./scripts/package.sh --zip`.
 The local ZIP uses your machine's architecture and build environment.
+
+## CI checks
+
+CI runs formatting, Clippy, Rust tests, ShellCheck, and actionlint on branch
+pushes and pull requests. The release workflow runs the same checks before
+packaging. Run the same lint checks locally before committing or pushing:
+
+```sh
+./scripts/lint.sh
+```
+
+On Linux x86-64 and ARM64, the script downloads pinned copies of ShellCheck
+and actionlint into the Git-ignored `target/tools/` directory. The first run
+requires network access, `curl`, `tar`, and `sha256sum`. Later runs reuse
+the installed binaries.
 
 ## Shared refresh settings
 
