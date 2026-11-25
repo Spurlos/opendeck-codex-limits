@@ -38,10 +38,23 @@ async fn response(reader: &mut (impl AsyncBufRead + Unpin), id: u64) -> Result<V
     }
 }
 
+/// Reads account quota using the `codex` executable on the inherited
+/// `PATH` and its existing login. The request neither starts a conversation
+/// nor redeems reset credits.
+///
+/// # Errors
+///
+/// Returns an error if Codex cannot start, the account cannot provide quota
+/// data, or the request fails, including a 30-second response timeout.
 pub async fn read() -> Result<Quota> {
     read_from("codex", Duration::from_secs(30)).await
 }
 
+/// Performs the app-server handshake and quota request within `limit`.
+///
+/// Cleanup has a separate two-second grace period. The probe closes stdin
+/// and drains stdout while waiting for Codex to exit, then kills and reaps
+/// the child if cleanup stalls.
 pub(crate) async fn read_from(executable: &str, limit: Duration) -> Result<Quota> {
     let mut child = Command::new(executable)
         .arg("app-server")

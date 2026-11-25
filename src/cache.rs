@@ -7,6 +7,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// The last successful quota reading and its Unix timestamp in seconds.
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot {
@@ -14,6 +15,8 @@ pub struct Snapshot {
     pub last_success_at: i64,
 }
 
+/// Resolves the shared cache under an absolute `XDG_CACHE_HOME` or
+/// `HOME/.cache`. Returns `None` if neither base directory is usable.
 pub fn path() -> Option<PathBuf> {
     let root = env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)
@@ -28,6 +31,12 @@ pub fn path() -> Option<PathBuf> {
 }
 
 impl Snapshot {
+    /// Loads and validates the cache. A missing file is an empty cache.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or contains invalid
+    /// quota data or an invalid timestamp.
     pub fn load(path: &Path) -> Result<Option<Self>> {
         let bytes = match fs::read(path) {
             Ok(bytes) => bytes,
@@ -40,6 +49,17 @@ impl Snapshot {
         Ok(Some(snapshot))
     }
 
+    /// Atomically replaces the cache with a temporary file in the same
+    /// directory so readers see a complete snapshot.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the directory cannot be created or the new
+    /// snapshot cannot be serialized, written, or persisted.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `path` has no parent.
     pub fn save(&self, path: &Path) -> Result<()> {
         let directory = path.parent().expect("quota cache has a parent directory");
         fs::create_dir_all(directory)?;

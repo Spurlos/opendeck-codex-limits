@@ -21,6 +21,8 @@ impl Window {
 pub struct Quota {
     pub primary: Option<Window>,
     pub secondary: Option<Window>,
+    /// A missing count means the account did not report a usable value.
+    /// A reported zero means no credits are available.
     pub banked_resets: Option<u64>,
 }
 
@@ -41,6 +43,16 @@ impl Quota {
     }
 }
 
+/// Parses the result of `account/rateLimits/read`.
+///
+/// Prefers the Codex entry in `rateLimitsByLimitId` and falls back to legacy
+/// `rateLimits` when that entry is absent or null. Reset credits come from
+/// `rateLimitResetCredits.availableCount` on the top-level result.
+///
+/// # Errors
+///
+/// Returns an error if no usable quota window is present or a reported
+/// window is malformed.
 pub fn parse(result: Value) -> Result<Quota> {
     let snapshot = result
         .pointer("/rateLimitsByLimitId/codex")

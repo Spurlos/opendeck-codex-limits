@@ -11,6 +11,8 @@ pub enum KeyState {
     Unavailable,
 }
 
+/// Formats time until the reported reset relative to Unix time `now` in seconds.
+/// Rounds up partial minutes and displays "Reset due" once the time passes.
 pub fn countdown(window: &Window, now: i64) -> String {
     let seconds = window.resets_at.saturating_sub(now).max(0);
     if seconds == 0 {
@@ -26,6 +28,11 @@ pub fn countdown(window: &Window, now: i64) -> String {
     }
 }
 
+/// Builds the SVG data URI sent to OpenDeck for one key.
+///
+/// `label` must be trusted SVG text because it is interpolated without
+/// escaping. The caller supplies any cached window to display during an
+/// update or after an error.
 pub fn image(
     label: &str,
     window: Option<&Window>,

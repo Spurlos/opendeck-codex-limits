@@ -1,8 +1,7 @@
 use serde::Serialize;
 use std::fmt;
 
-/// Only these fixed messages cross into the inspector; raw server errors may
-/// contain account information and must never be forwarded.
+/// Sanitized failure codes used in logs and inspector status messages.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Failure {
@@ -49,6 +48,8 @@ impl Failure {
             .unwrap_or(Self::RequestFailed)
     }
 
+    /// Classifies a Codex RPC error without exposing the original message,
+    /// which may contain account information.
     pub fn remote(error: &serde_json::Value) -> Self {
         let text = error
             .get("message")
@@ -91,6 +92,7 @@ impl fmt::Display for Failure {
 }
 impl std::error::Error for Failure {}
 
+/// Runtime status sent to each open property inspector as `quotaStatus`.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Status {

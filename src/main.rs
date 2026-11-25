@@ -1,3 +1,8 @@
+//! OpenDeck plugin for displaying Codex subscription quota on two keys.
+//!
+//! Both actions share one probe, cache, and refresh schedule. Key redraws can
+//! update the countdown from cached quota without starting a probe.
+
 mod cache;
 mod diagnostics;
 mod probe;
@@ -152,6 +157,12 @@ impl Shared {
         }
     }
 
+    /// Starts a refresh of both quota windows if a probe is idle.
+    ///
+    /// Scheduled requests recheck their deadline after acquiring the probe
+    /// lock because visibility or settings may have changed. Manual requests
+    /// can refresh during retry backoff. Overlapping requests share the result
+    /// of the probe already in progress.
     fn refresh(self: &Arc<Self>, trigger: RefreshTrigger) {
         let Ok(guard) = self.probe.clone().try_lock_owned() else {
             return;

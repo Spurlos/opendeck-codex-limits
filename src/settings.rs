@@ -32,6 +32,10 @@ impl RefreshSettings {
     }
 }
 
+/// Shared scheduling state for both quota actions.
+///
+/// Deadlines use the monotonic clock. Reported reset timestamps are
+/// converted when each successful probe completes.
 #[derive(Clone, Default)]
 pub struct Polling {
     pub settings: Option<RefreshSettings>,
@@ -56,6 +60,12 @@ impl Polling {
         self.settings = Some(settings);
     }
 
+    /// Returns the next automatic refresh time.
+    ///
+    /// Refreshes wait for loaded settings, a visible key, and an idle probe.
+    /// Startup refresh can run once before any probe attempt. With periodic
+    /// refresh enabled, the earlier of the interval deadline and the next
+    /// reported reset wins. Failures use interval-based backoff.
     pub fn deadline(&self) -> Option<Instant> {
         let settings = self.settings.as_ref()?;
         if self.visible.is_empty() || self.refreshing {
@@ -85,6 +95,8 @@ impl Polling {
         })
     }
 
+    /// Starts the next interval from probe completion and updates backoff.
+    /// On success, only future reset times are eligible to advance the schedule.
     pub fn completed(&mut self, quota: Option<&crate::quota::Quota>, unix_now: i64) {
         self.refreshing = false;
         self.finished_at = Some(Instant::now());
@@ -107,8 +119,10 @@ impl Polling {
     }
 }
 
-/// Rebuild the single timer whenever settings, visibility or probe state change.
-/// No missed-tick catch-up: the next interval begins when the probe finishes.
+/// Waits for the next automatic refresh, rebuilding the timer whenever
+/// settings, visibility, or probe state change.
+///
+/// Returns `true` when the timer expires and `false` when the channel closes.
 pub async fn wait_for_refresh(receiver: &mut watch::Receiver<Polling>) -> bool {
     loop {
         let deadline = receiver.borrow_and_update().deadline();
